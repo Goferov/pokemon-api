@@ -38,4 +38,9 @@ class CustomPokemonRepository
     {
         return CustomPokemon::where('name', strtolower($name))->exists();
     }
+
+    public function findByNames(array $names): Collection
+    {
+        return CustomPokemon::whereIn('name', $names)->get();
+    }
 }
