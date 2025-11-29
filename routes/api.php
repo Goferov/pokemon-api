@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PokemonInfoController;
 use App\Http\Middleware\SuperSecretKeyMiddleware;
 use Illuminate\Support\Facades\Route;
 
@@ -10,3 +11,5 @@ Route::middleware([SuperSecretKeyMiddleware::class])->prefix('banned')->group(fu
     Route::post('/', [BannedPokemonController::class, 'store']);
     Route::delete('{bannedPokemon}', [BannedPokemonController::class, 'destroy']);
 });
+
+Route::post('/info', PokemonInfoController::class);
