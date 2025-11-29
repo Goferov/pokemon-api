@@ -433,4 +433,4 @@ Endpoint `/info` wykorzystuje ten serwis cache, dzięki czemu kolejne zapytania 
 
 ## 7. OpenAPI / Swagger
 
-Deklarację OpenAPI (YAML) dla tego API można umieścić np. w pliku `openapi.yaml` w katalogu głównym projektu i wykorzystać w Swagger UI / Redoc.
+Deklarację OpenAPI (YAML) znajduje się w katalogu resources.
