@@ -1,0 +1,396 @@
+openapi: 3.0.3
+info:
+  title: Pokemon Info API
+  version: 1.0.0
+  description: >
+    API do pobierania informacji o Pokemonach z PokeAPI,
+    zarządzania rejestrem zakazanych Pokemonów oraz własnymi Pokemonami.
+servers:
+  - url: http://localhost:8000/api
+    description: Local dev server
+
+components:
+  securitySchemes:
+    SuperSecretKey:
+      type: apiKey
+      in: header
+      name: X-SUPER-SECRET-KEY
+
+  schemas:
+    PokemonInfoItem:
+      type: object
+      properties:
+        name:
+          type: string
+        height:
+          type: integer
+          nullable: true
+        weight:
+          type: integer
+          nullable: true
+        types:
+          type: array
+          items:
+            type: string
+        is_custom:
+          type: boolean
+      required:
+        - name
+        - types
+        - is_custom
+
+    BannedPokemon:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+
+    CustomPokemon:
+      type: object
+      properties:
+        name:
+          type: string
+        height:
+          type: integer
+          nullable: true
+        weight:
+          type: integer
+          nullable: true
+        types:
+          type: array
+          items:
+            type: string
+        stats:
+          type: object
+          additionalProperties: true
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        is_custom:
+          type: boolean
+      required:
+        - name
+        - is_custom
+
+    CustomPokemonCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomPokemon'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+paths:
+  /info:
+    post:
+      summary: Get information about selected pokemons
+      tags: [Info]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                names:
+                  type: array
+                  items:
+                    type: string
+              required: [names]
+      responses:
+        '200':
+          description: List of found pokemons (official + custom)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PokemonInfoItem'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /banned:
+    get:
+      summary: Get list of banned pokemons
+      tags: [Banned]
+      security:
+        - SuperSecretKey: []
+      responses:
+        '200':
+          description: List of banned pokemons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BannedPokemon'
+        '401':
+          description: Missing X-SUPER-SECRET-KEY
+        '403':
+          description: Invalid X-SUPER-SECRET-KEY
+
+    post:
+      summary: Add pokemon to banned list
+      tags: [Banned]
+      security:
+        - SuperSecretKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required: [name]
+      responses:
+        '201':
+          description: Pokemon added to banned list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BannedPokemon'
+        '401':
+          description: Missing X-SUPER-SECRET-KEY
+        '403':
+          description: Invalid X-SUPER-SECRET-KEY
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /banned/{id}:
+    delete:
+      summary: Remove pokemon from banned list
+      tags: [Banned]
+      security:
+        - SuperSecretKey: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID banned pokemon (route model binding as bannedPokemon)
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          description: Missing X-SUPER-SECRET-KEY
+        '403':
+          description: Invalid X-SUPER-SECRET-KEY
+        '404':
+          description: Not found
+
+  /custom-pokemons:
+    get:
+      summary: List custom pokemons (paginated)
+      tags: [Custom]
+      security:
+        - SuperSecretKey: []
+      parameters:
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+          required: false
+      responses:
+        '200':
+          description: Paginated custom pokemons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomPokemonCollection'
+        '401':
+          description: Missing X-SUPER-SECRET-KEY
+        '403':
+          description: Invalid X-SUPER-SECRET-KEY
+
+    post:
+      summary: Create custom pokemon
+      tags: [Custom]
+      security:
+        - SuperSecretKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                types:
+                  type: array
+                  items:
+                    type: string
+                height:
+                  type: integer
+                  nullable: true
+                weight:
+                  type: integer
+                  nullable: true
+                stats:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
+                description:
+                  type: string
+                  nullable: true
+              required: [name]
+      responses:
+        '201':
+          description: Custom pokemon created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomPokemon'
+        '401':
+          description: Missing X-SUPER-SECRET-KEY
+        '403':
+          description: Invalid X-SUPER-SECRET-KEY
+        '422':
+          description: Validation error or business error (name conflict)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /custom-pokemons/{id}:
+    get:
+      summary: Get single custom pokemon
+      tags: [Custom]
+      security:
+        - SuperSecretKey: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID custom pokemon (route model binding as customPokemon)
+      responses:
+        '200':
+          description: Custom pokemon details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomPokemon'
+        '401':
+          description: Missing X-SUPER-SECRET-KEY
+        '403':
+          description: Invalid X-SUPER-SECRET-KEY
+        '404':
+          description: Not found
+
+    put:
+      summary: Update custom pokemon
+      tags: [Custom]
+      security:
+        - SuperSecretKey: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID custom pokemon (route model binding as customPokemon)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                types:
+                  type: array
+                  items:
+                    type: string
+                height:
+                  type: integer
+                  nullable: true
+                weight:
+                  type: integer
+                  nullable: true
+                stats:
+                  type: object
+                  additionalProperties: true
+                  nullable: true
+                description:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Updated custom pokemon
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomPokemon'
+        '401':
+          description: Missing X-SUPER-SECRET-KEY
+        '403':
+          description: Invalid X-SUPER-SECRET-KEY
+        '404':
+          description: Not found
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+    delete:
+      summary: Delete custom pokemon
+      tags: [Custom]
+      security:
+        - SuperSecretKey: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID custom pokemon (route model binding as customPokemon)
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          description: Missing X-SUPER-SECRET-KEY
+        '403':
+          description: Invalid X-SUPER-SECRET-KEY
+        '404':
+          description: Not found
