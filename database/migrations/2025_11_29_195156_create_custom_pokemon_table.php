@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('custom_pokemons', function (Blueprint $table) {
+        Schema::create('custom_pokemon', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
             $table->json('types')->nullable();
